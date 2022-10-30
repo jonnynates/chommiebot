@@ -1,40 +1,36 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const database = require("../../database.js");
+const util = require("util");
+
+const query = util.promisify(database.query).bind(database);
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("wishlist")
-    .setDescription("Returns the wishlist for the rquested usser"),
+    .setDescription("Returns the wishlist for the requested user")
+    .addUserOption((option) =>
+      option.setName("target").setDescription("The user to get wishlist for")
+    ),
   async execute(interaction, client) {
-    const message = await interaction.deferReply({
-      fetchReply: true,
-    });
-
-    console.log("hello");
-    message.channel.send("hello");
-
-    const sql = `Select k.name from orders o
+    const target = interaction.options.getUser("target") ?? interaction.user;
+    var list;
+    const sql = `Select k.grade, k.name, o.date_requested from orders o
     left join kits k on k.id = o.product_id
     left join users u on u.id = o.user_id
-    where discord_id = ${message.author.id}`;
-    const list = database.query(sql, (err, resp) => {
-      console.log(resp);
+    where discord_id = ${target.id}`;
+
+    await database.connect();
+    const resp = await query(sql);
+    await database.end();
+    list = resp.rows.map((order) => `${order.grade} ${order.name}`);
+
+    const message = new EmbedBuilder()
+      .setColor(0x0099ff)
+      .setTitle(`Wishlist for ${target.username}`)
+      .setDescription(list.join("\n"));
+
+    interaction.reply({
+      embeds: [message],
     });
-    console.log(list);
-
-    const newMessage = "hello world";
-    await interaction.editReply({
-      content: newMessage,
-    });
-
-    // players = list.roles.cache
-    //   .get(character.id)
-    //   .members.map((m) => m.user.username);
-
-    // if (players.length > 0) {
-    //   newEmbed.setDescription(players.join("\n"));
-
-    //   message.channel.send({ embeds: [newEmbed] });
-    // }
   },
 };
