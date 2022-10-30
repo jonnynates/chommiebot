@@ -19,7 +19,7 @@ module.exports = (client) => {
     }
 
     const clientId = "948665648848986192";
-    const guildId = "897112195605860412";
+    const guildId = "1030480531651051621";
     const rest = new REST({ version: "9" }).setToken(process.env.token);
     try {
       await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
