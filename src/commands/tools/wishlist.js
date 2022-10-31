@@ -1,8 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const database = require("../../database.js");
-const util = require("util");
+const { Client } = require("pg");
 
-const query = util.promisify(database.query).bind(database);
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -19,9 +17,17 @@ module.exports = {
     left join users u on u.id = o.user_id
     where discord_id = ${target.id}`;
 
-    await database.connect();
-    const resp = await query(sql);
-    await database.end();
+    const pg = new Client();
+    await pg.connect();
+    const resp = await pg.query(sql);
+    await pg.end();
+
+    if (resp.rows.length <= 0) {
+      interaction.reply({
+        content: "This user does not have any requested kits",
+      });
+      return;
+    }
     list = resp.rows.map((order) => `${order.grade} ${order.name}`);
 
     const message = new EmbedBuilder()
