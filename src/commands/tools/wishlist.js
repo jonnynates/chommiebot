@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const { Client } = require("pg");
-
+const db = require("../../db");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -15,16 +14,13 @@ module.exports = {
     const sql = `Select k.grade, k.name, o.date_requested from orders o
     left join kits k on k.id = o.product_id
     left join users u on u.id = o.user_id
-    where discord_id = ${target.id}`;
+    where discord_id = $1`;
 
-    const pg = new Client();
-    await pg.connect();
-    const resp = await pg.query(sql);
-    await pg.end();
+    const resp = await db.query(sql, [target.id]);
 
     if (resp.rows.length <= 0) {
       interaction.reply({
-        content: "This user does not have any requested kits",
+        content: `${target.username} does not have any requested kits`,
       });
       return;
     }
