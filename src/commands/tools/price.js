@@ -32,8 +32,6 @@ module.exports = {
     const sql = `Select name, grade, price from kits where name ilike $1 and grade = $2`;
 
     const resp = await db.query(sql, [`%${name}%`, grade]);
-    console.log(resp);
-    console.log(resp.price);
 
     if (resp.rows.length <= 0) {
       interaction.reply({
@@ -52,8 +50,6 @@ module.exports = {
       list = filteredKits.map(
         (kit) => `${kit.grade} ${kit.name} Price: R${kit.price}`
       );
-
-      console.log(list);
 
       const message = new EmbedBuilder()
         .setColor(0x0099ff)
