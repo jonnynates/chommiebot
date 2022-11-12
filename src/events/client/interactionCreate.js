@@ -16,6 +16,17 @@ module.exports = {
           ephemeral: true,
         });
       }
+    } else if (interaction.isAutocomplete()) {
+      const { commands } = client;
+      const { commandName } = interaction;
+      const command = commands.get(commandName);
+      if (!command) return;
+
+      try {
+        await command.autocomplete(interaction, client);
+      } catch (error) {
+        console.error(error);
+      }
     }
   },
 };
