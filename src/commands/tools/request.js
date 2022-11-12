@@ -42,23 +42,25 @@ module.exports = {
       selectedGrade != grade
     ) {
       selectedGrade = grade;
-      const sql = `Select id, name from kits where grade = $1`;
-      const product_line = grade != "null" ? grade : "";
-      kitsForGrade = await db.query(sql, [product_line]);
+      if (grade == "null") {
+        const sql = `Select id, grade, name from kits where grade not in ('HG', 'RG', 'MG', 'EG', 'SD', 'PG', '30MM')`;
+        kitsForGrade = await db.query(sql, []);
+      } else {
+        const sql = `Select id, grade, name from kits where grade = $1`;
+        kitsForGrade = await db.query(sql, [grade]);
+      }
     }
 
-    const focusedOption = interaction.options.getFocused(true);
-    const kitNames = kitsForGrade.rows.map((kit) => [kit.id, kit.name]);
-    if (focusedOption.value != "") {
-      const filteredKitNames = kitNames.filter((name) => {
-        return (
-          name[1].toLowerCase().indexOf(focusedOption.value.toLowerCase()) >= 0
-        );
-      });
-      choices = filteredKitNames.slice(0, 25);
-    } else {
-      choices = kitNames.slice(0, 25);
-    }
+    const focusedOption = interaction.options.getFocused();
+    const kitNames = kitsForGrade.rows.map((kit) => [
+      kit.id,
+      `${kit.grade} ${kit.name}`,
+    ]);
+
+    const filteredKitNames = kitNames.filter((name) => {
+      return name[1].toLowerCase().indexOf(focusedOption.toLowerCase()) >= 0;
+    });
+    choices = filteredKitNames.slice(0, 25);
 
     await interaction.respond(
       choices.map((choice) => ({
