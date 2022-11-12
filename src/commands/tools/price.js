@@ -32,15 +32,14 @@ module.exports = {
     const sql = `Select name, grade, price from kits where name ilike $1 and grade = $2`;
 
     const resp = await db.query(sql, [`%${name}%`, grade]);
+    filteredKits = resp.rows.filter((kit) => kit.price != null);
 
-    if (resp.rows.length <= 0) {
+    if (resp.rows.length <= 0 || filteredKits.length <= 0) {
       interaction.reply({
-        content: `Could not find the price of the: ${kit.grade} ${kit.name}`,
+        content: `Could not find the price of the: ${grade} ${name}`,
       });
       return;
     }
-
-    filteredKits = resp.rows.filter((kit) => kit.price != null);
 
     if (filteredKits.length == 1) {
       await interaction.reply({
