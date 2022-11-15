@@ -26,7 +26,7 @@ module.exports = {
         .setDescription("The name of the kit")
         .setRequired(true)
     ),
-  async execute(interaction, client) {
+  async execute(interaction) {
     const grade = interaction.options.getString("grade");
     const name = interaction.options.getString("name");
     const sql = `Select name, grade, price from kits where name ilike $1 and grade = $2`;
@@ -41,18 +41,20 @@ module.exports = {
       return;
     }
 
+    const filteredKits = resp.rows.filter((kit) => kit.price != null);
+
     if (filteredKits.length == 1) {
       await interaction.reply({
         content: `The price of the ${filteredKits[0].grade} ${filteredKits[0].name} is R${filteredKits[0].price}`,
       });
     } else if (filteredKits.length >= 1) {
-      list = filteredKits.map(
+      const list = filteredKits.map(
         (kit) => `${kit.grade} ${kit.name} Price: R${kit.price}`
       );
 
       const message = new EmbedBuilder()
         .setColor(0x0099ff)
-        .setTitle(`The prices of the ${kit.grade} ${kit.name}: `)
+        .setTitle(`The prices of the ${grade} ${name}: `)
         .setDescription(list.join("\n"));
 
       interaction.reply({
