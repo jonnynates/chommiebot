@@ -4,4 +4,4 @@ google.json
 auth.json
 token.json
 credentials.json
-default.json
+*/config/*
