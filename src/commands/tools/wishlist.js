@@ -8,7 +8,7 @@ module.exports = {
     .addUserOption((option) =>
       option.setName("target").setDescription("The user to get wishlist for")
     ),
-  async execute(interaction, client) {
+  async execute(interaction) {
     const target = interaction.options.getUser("target") ?? interaction.user;
     var list;
     const sql = `Select k.grade, k.name, o.date_requested from orders o
