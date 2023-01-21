@@ -1,9 +1,10 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
 const db = require("../../db");
 const orderStatus = require("../../db/order_statuses");
 
 var kitsForGrade;
 var selectedGrade;
+const CHOMMIEBOT_ID = 4;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -15,14 +16,14 @@ module.exports = {
         .setDescription("The product line of the kit")
         .setRequired(true)
         .addChoices(
-          { name: "HG", value: "HG" },
-          { name: "RG", value: "RG" },
-          { name: "MG", value: "MG" },
-          { name: "EG", value: "EG" },
-          { name: "SD", value: "SD" },
-          { name: "PG", value: "PG" },
+          { name: "HG", value: "1" },
+          { name: "RG", value: "2" },
+          { name: "MG", value: "3" },
+          { name: "EG", value: "5" },
+          { name: "SD", value: "6" },
+          { name: "PG", value: "4" },
           { name: "30MM", value: "30MM" },
-          { name: "No grade/other", value: "null" }
+          { name: "Other", value: "null" }
         )
     )
     .addStringOption((option) =>
@@ -32,7 +33,7 @@ module.exports = {
         .setAutocomplete(true)
         .setRequired(true)
     ),
-  async autocomplete(interaction, client) {
+  async autocomplete(interaction) {
     var choices;
     const grade = interaction.options.getString("product_line");
     if (
@@ -43,10 +44,14 @@ module.exports = {
     ) {
       selectedGrade = grade;
       if (grade == "null") {
-        const sql = `Select id, grade, name from kits where grade not in ('HG', 'RG', 'MG', 'EG', 'SD', 'PG', '30MM')`;
+        const sql = `Select k.id, pl.product_line_name, k.name from kits k 
+        left join product_lines pl on pl.id = k.product_line 
+        where pl.product_line_name not in ('HG', 'RG', 'MG', 'EG', 'SD', 'PG', '30MM') `;
         kitsForGrade = await db.query(sql, []);
       } else {
-        const sql = `Select id, grade, name from kits where grade = $1`;
+        const sql = `Select k.id, pl.product_line_name, k.name from kits k  
+        left join product_lines pl on pl.id = k.product_line
+        where k.product_line = $1 `;
         kitsForGrade = await db.query(sql, [grade]);
       }
     }
@@ -54,7 +59,7 @@ module.exports = {
     const focusedOption = interaction.options.getFocused();
     const kitNames = kitsForGrade.rows.map((kit) => [
       kit.id,
-      `${kit.grade} ${kit.name}`,
+      `${kit.product_line_name} ${kit.name}`,
     ]);
 
     const filteredKitNames = kitNames.filter((name) => {
@@ -69,22 +74,25 @@ module.exports = {
       }))
     );
   },
-  async execute(interaction, client) {
+  async execute(interaction) {
     const grade = interaction.options.getString("product_line");
     const name = interaction.options.getString("name");
 
     const user = await retrieveUser(interaction.user);
 
-    const sql = `INSERT INTO orders (user_id, product_id, date_requested, status) VALUES ($1, $2, NOW(), $3) RETURNING (SELECT name FROM kits WHERE id = product_id)`;
-    const requestProduct = await db.query(sql, [
+    const newRequestSQL = `INSERT INTO orders (user_id, product_id, date_requested, status) VALUES ($1, $2, NOW(), $3) RETURNING id`;
+    const newRequest = await db.query(newRequestSQL, [
       user.id,
       name,
       orderStatus.NEW_REQUEST,
     ]);
 
-    if (requestProduct.rows != null) {
+    await createAuditHistory(newRequest.rows[0].id);
+    const kit = await getKit(newRequest.rows[0].id);
+
+    if (newRequest.rows != null) {
       interaction.reply({
-        content: `Successfull added ${grade} ${requestProduct.rows[0].name} to your wishlist`,
+        content: `Successfull added ${kit.product_line_name} ${kit.name} to your wishlist`,
       });
     }
     return;
@@ -104,4 +112,24 @@ async function retrieveUser(discordUser) {
     return newUser.rows[0];
   }
   return oldUser.rows[0];
+}
+
+async function createAuditHistory(orderId) {
+  const auditHistorySQL = `INSERT INTO audit_history (order_id, status_id, performed_at, initiator_id)
+  VALUES ($1, $2, NOW(), $3)`;
+  await db.query(auditHistorySQL, [
+    orderId,
+    orderStatus.NEW_REQUEST,
+    CHOMMIEBOT_ID,
+  ]);
+}
+
+async function getKit(order_id) {
+  const sql = `Select pl.product_line_name, k.name from kits k  
+  left join product_lines pl on pl.id = k.product_line
+  left join orders o on o.product_id = k.id
+  where o.id = $1 `;
+  const kit = await db.query(sql, [order_id]);
+
+  return kit.rows[0];
 }

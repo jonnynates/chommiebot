@@ -11,13 +11,14 @@ module.exports = {
         .setDescription("The grade of the kit")
         .setRequired(true)
         .addChoices(
-          { name: "HG", value: "HG" },
-          { name: "RG", value: "RG" },
-          { name: "MG", value: "MG" },
-          { name: "EG", value: "EG" },
-          { name: "PG", value: "PG" },
+          { name: "HG", value: "1" },
+          { name: "RG", value: "2" },
+          { name: "MG", value: "3" },
+          { name: "EG", value: "5" },
+          { name: "SD", value: "6" },
+          { name: "PG", value: "4" },
           { name: "30MM", value: "30MM" },
-          { name: "No grade", value: "null" }
+          { name: "Other", value: "999" }
         )
     )
     .addStringOption((option) =>
@@ -29,7 +30,7 @@ module.exports = {
   async execute(interaction) {
     const grade = interaction.options.getString("grade");
     const name = interaction.options.getString("name");
-    const sql = `Select name, grade, price from kits where name ilike $1 and grade = $2`;
+    const sql = `Select name, product_line, price from kits where name ilike $1 and product_line = $2`;
 
     const resp = await db.query(sql, [`%${name}%`, grade]);
     const filteredKits = resp.rows.filter((kit) => kit.price != null);

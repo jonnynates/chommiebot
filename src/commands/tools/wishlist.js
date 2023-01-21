@@ -11,9 +11,10 @@ module.exports = {
   async execute(interaction) {
     const target = interaction.options.getUser("target") ?? interaction.user;
     var list;
-    const sql = `Select k.grade, k.name, o.date_requested from orders o
+    const sql = `Select pl.product_line_name, k.name, o.date_requested from orders o
     left join kits k on k.id = o.product_id
     left join users u on u.id = o.user_id
+    left join product_lines pl on pl.id = k.product_line
     where discord_id = $1`;
 
     const resp = await db.query(sql, [target.id]);
@@ -24,7 +25,7 @@ module.exports = {
       });
       return;
     }
-    list = resp.rows.map((order) => `${order.grade} ${order.name}`);
+    list = resp.rows.map((order) => `${order.product_line_name} ${order.name}`);
 
     const message = new EmbedBuilder()
       .setColor(0x0099ff)
