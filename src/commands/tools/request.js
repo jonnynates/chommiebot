@@ -78,7 +78,6 @@ module.exports = {
     const product_id = interaction.options.getString("name");
     const user = await retrieveUser(interaction.user);
 
-    console.log("name", product_id);
     const duplicateOrderExists = await checkDuplicateProductOrder(
       user.id,
       product_id
