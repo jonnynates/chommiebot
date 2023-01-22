@@ -75,15 +75,27 @@ module.exports = {
     );
   },
   async execute(interaction) {
-    const grade = interaction.options.getString("product_line");
-    const name = interaction.options.getString("name");
-
+    const product_id = interaction.options.getString("name");
     const user = await retrieveUser(interaction.user);
+
+    console.log("name", product_id);
+    const duplicateOrderExists = await checkDuplicateProductOrder(
+      user.id,
+      product_id
+    );
+
+    if (duplicateOrderExists == true) {
+      interaction.reply({
+        content: `Cannot add this kit to your requests. You already have an existing request this kit`,
+      });
+
+      return;
+    }
 
     const newRequestSQL = `INSERT INTO orders (user_id, product_id, date_requested, status) VALUES ($1, $2, NOW(), $3) RETURNING id`;
     const newRequest = await db.query(newRequestSQL, [
       user.id,
-      name,
+      product_id,
       orderStatus.NEW_REQUEST,
     ]);
 
@@ -98,6 +110,20 @@ module.exports = {
     return;
   },
 };
+
+async function checkDuplicateProductOrder(user_id, product_id) {
+  // TODO: Maybe add status checks, e.g. it's okay to re-request if you previously removed a kit from your list
+  // or it's okay to re-request if you've already bought the kit previously. Ask jeff and paul for bussiness logic
+  const duplicateSQL = `SELECT * FROM orders 
+  WHERE user_id = $1
+  AND product_id = $2`;
+  const existingOrder = await db.query(duplicateSQL, [user_id, product_id]);
+
+  if (existingOrder.rows.length == 0) {
+    return false;
+  }
+  return true;
+}
 
 async function retrieveUser(discordUser) {
   const findUserSql = `SELECT * FROM users WHERE discord_id = $1`;
