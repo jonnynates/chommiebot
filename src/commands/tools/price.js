@@ -1,5 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
 const db = require("../../db");
+
+var kitsForGrade;
+var selectedGrade;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -7,8 +10,8 @@ module.exports = {
     .setDescription("Checks the price of a kit")
     .addStringOption((option) =>
       option
-        .setName("grade")
-        .setDescription("The grade of the kit")
+        .setName("product_line")
+        .setDescription("The product line of the kit")
         .setRequired(true)
         .addChoices(
           { name: "HG", value: "1" },
@@ -18,47 +21,75 @@ module.exports = {
           { name: "SD", value: "6" },
           { name: "PG", value: "4" },
           { name: "30MM", value: "30MM" },
-          { name: "Other", value: "999" }
+          { name: "Other", value: "null" }
         )
     )
     .addStringOption((option) =>
       option
         .setName("name")
         .setDescription("The name of the kit")
+        .setAutocomplete(true)
         .setRequired(true)
     ),
-  async execute(interaction) {
-    const grade = interaction.options.getString("grade");
-    const name = interaction.options.getString("name");
-    const sql = `Select name, product_line, price from kits where name ilike $1 and product_line = $2`;
+  async autocomplete(interaction) {
+    var choices;
+    const grade = interaction.options.getString("product_line");
+    if (
+      kitsForGrade == undefined ||
+      kitsForGrade.length == 0 ||
+      selectedGrade == undefined ||
+      selectedGrade != grade
+    ) {
+      selectedGrade = grade;
+      if (grade == "null") {
+        const sql = `Select k.id, pl.product_line_name, k.name from kits k 
+          left join product_lines pl on pl.id = k.product_line 
+          where pl.product_line_name not in ('HG', 'RG', 'MG', 'EG', 'SD', 'PG', '30MM') `;
+        kitsForGrade = await db.query(sql, []);
+      } else {
+        const sql = `Select k.id, pl.product_line_name, k.name from kits k  
+          left join product_lines pl on pl.id = k.product_line
+          where k.product_line = $1 `;
+        kitsForGrade = await db.query(sql, [grade]);
+      }
+    }
 
-    const resp = await db.query(sql, [`%${name}%`, grade]);
+    const focusedOption = interaction.options.getFocused();
+    const kitNames = kitsForGrade.rows.map((kit) => [
+      kit.id,
+      `${kit.product_line_name} ${kit.name}`,
+    ]);
+
+    const filteredKitNames = kitNames.filter((name) => {
+      return name[1].toLowerCase().indexOf(focusedOption.toLowerCase()) >= 0;
+    });
+    choices = filteredKitNames.slice(0, 25);
+
+    await interaction.respond(
+      choices.map((choice) => ({
+        name: choice[1],
+        value: choice[0].toString(),
+      }))
+    );
+  },
+  async execute(interaction) {
+    const product_id = interaction.options.getString("name");
+    const sql = `Select k.name, pl.product_line_name, k.price from kits k
+    left join product_lines pl on pl.id = k.product_line 
+    where k.id = $1`;
+
+    const resp = await db.query(sql, [product_id]);
     const filteredKits = resp.rows.filter((kit) => kit.price != null);
 
-    if (resp.rows.length <= 0 || filteredKits.length <= 0) {
+    if (filteredKits.length <= 0) {
       interaction.reply({
-        content: `Could not find the price of the: ${grade} ${name}`,
+        content: `Could not find the price of the: **${resp.rows[0].product_line_name} ${resp.rows[0].name}**\nPlease ask a member of GUNPLA SA for a price estimation.`,
       });
       return;
     }
 
-    if (filteredKits.length == 1) {
-      await interaction.reply({
-        content: `The price of the ${filteredKits[0].grade} ${filteredKits[0].name} is R${filteredKits[0].price}`,
-      });
-    } else if (filteredKits.length >= 1) {
-      const list = filteredKits.map(
-        (kit) => `${kit.grade} ${kit.name} Price: R${kit.price}`
-      );
-
-      const message = new EmbedBuilder()
-        .setColor(0x0099ff)
-        .setTitle(`The prices of the ${grade} ${name}: `)
-        .setDescription(list.join("\n"));
-
-      interaction.reply({
-        embeds: [message],
-      });
-    }
+    await interaction.reply({
+      content: `The price of the **${filteredKits[0].product_line_name} ${filteredKits[0].name}** is R${filteredKits[0].price}`,
+    });
   },
 };

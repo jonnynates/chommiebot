@@ -15,7 +15,8 @@ module.exports = {
     left join kits k on k.id = o.product_id
     left join users u on u.id = o.user_id
     left join product_lines pl on pl.id = k.product_line
-    where discord_id = $1`;
+    where discord_id = $1
+    ORDER BY pl.product_line_name ASC`;
 
     const resp = await db.query(sql, [target.id]);
 
