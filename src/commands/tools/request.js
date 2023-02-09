@@ -77,6 +77,14 @@ module.exports = {
   async execute(interaction) {
     const product_id = interaction.options.getString("name");
     const user = await retrieveUser(interaction.user);
+    if (Number.isInteger(product_id) == false) {
+      const product_line = await getProductLineByID(selectedGrade);
+      interaction.reply({
+        content: `Sorry this kit does not exist in database.\nPlease ask a member of GUNPLA SA to add: **${product_line.product_line_name} ${product_id}** `,
+      });
+
+      return;
+    }
 
     const duplicateOrderExists = await checkDuplicateProductOrder(
       user.id,
@@ -103,7 +111,7 @@ module.exports = {
 
     if (newRequest.rows != null) {
       interaction.reply({
-        content: `Successfull added ${kit.product_line_name} ${kit.name} to your wishlist`,
+        content: `Successfull added **${kit.product_line_name} ${kit.name}** to your wishlist`,
       });
     }
     return;
@@ -157,4 +165,11 @@ async function getKit(order_id) {
   const kit = await db.query(sql, [order_id]);
 
   return kit.rows[0];
+}
+
+async function getProductLineByID(product_line_id) {
+  const sql = `Select * from product_lines where id = $1 `;
+  const product_line = await db.query(sql, [product_line_id]);
+
+  return product_line.rows[0];
 }
