@@ -75,7 +75,7 @@ module.exports = {
   async execute(interaction) {
     const product_id = interaction.options.getString("name");
 
-    if (Number.isInteger(product_id) == false) {
+    if (isNaN(parseInt(product_id))) {
       const product_line = await getProductLineByID(selectedGrade);
       interaction.reply({
         content: `Sorry this kit does not exist in database.\nPlease ask a member of GUNPLA SA to add: **${product_line.product_line_name} ${product_id}** `,
@@ -84,7 +84,7 @@ module.exports = {
       return;
     }
 
-    const sql = `Select k.name, pl.product_line_name, k.price from kits k
+    const sql = `Select k.name, pl.product_line_name, k.price, k.gpsa_link from kits k
     left join product_lines pl on pl.id = k.product_line 
     where k.id = $1`;
 
@@ -98,8 +98,15 @@ module.exports = {
       return;
     }
 
+    if (filteredKits[0].gpsa_link == null) {
+      interaction.reply({
+        content: `The current estimated price of the **${filteredKits[0].product_line_name} ${filteredKits[0].name}** is R${filteredKits[0].price}`,
+      });
+      return;
+    }
+
     await interaction.reply({
-      content: `The price of the **${filteredKits[0].product_line_name} ${filteredKits[0].name}** is R${filteredKits[0].price}`,
+      content: `The price of the **${filteredKits[0].product_line_name} ${filteredKits[0].name}** is R${filteredKits[0].price}.\nWe have bought it in before, check it out on our website!\n${filteredKits[0].gpsa_link}`,
     });
   },
 };

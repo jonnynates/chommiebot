@@ -77,7 +77,10 @@ module.exports = {
   async execute(interaction) {
     const product_id = interaction.options.getString("name");
     const user = await retrieveUser(interaction.user);
-    if (Number.isInteger(product_id) == false) {
+    console.log("proud", product_id);
+    console.log(typeof product_id);
+
+    if (isNaN(parseInt(product_id))) {
       const product_line = await getProductLineByID(selectedGrade);
       interaction.reply({
         content: `Sorry this kit does not exist in database.\nPlease ask a member of GUNPLA SA to add: **${product_line.product_line_name} ${product_id}** `,
@@ -94,6 +97,15 @@ module.exports = {
     if (duplicateOrderExists == true) {
       interaction.reply({
         content: `Cannot add this kit to your requests. You already have an existing request this kit`,
+      });
+
+      return;
+    }
+
+    const exclusive = await checkIfExclusiveKit(product_id);
+    if (exclusive !== "") {
+      interaction.reply({
+        content: `Cannot add this kit to your requests. Unfortunately this kit is **${exclusive}** and we cannot bring it in`,
       });
 
       return;
@@ -119,17 +131,20 @@ module.exports = {
 };
 
 async function checkDuplicateProductOrder(user_id, product_id) {
-  // TODO: Maybe add status checks, e.g. it's okay to re-request if you previously removed a kit from your list
-  // or it's okay to re-request if you've already bought the kit previously. Ask jeff and paul for bussiness logic
-  const duplicateSQL = `SELECT * FROM orders 
-  WHERE user_id = $1
-  AND product_id = $2`;
+  const duplicateSQL = `SELECT * FROM orders WHERE user_id = $1 AND product_id = $2`;
   const existingOrder = await db.query(duplicateSQL, [user_id, product_id]);
 
   if (existingOrder.rows.length == 0) {
     return false;
   }
   return true;
+}
+
+async function checkIfExclusiveKit(product_id) {
+  const duplicateSQL = `SELECT exclusive FROM kits WHERE id = $1`;
+  const product = await db.query(duplicateSQL, [product_id]);
+
+  return product.rows[0].exclusive;
 }
 
 async function retrieveUser(discordUser) {
