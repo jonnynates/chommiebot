@@ -1,7 +1,7 @@
 {
   "name": "chommiebot",
   "version": "1.0.0",
-  "description": "Discord bot for GunplaSA",
+  "description": "Discord bot for GUNPLASA",
   "main": "src/main.js",
   "scripts": {
     "start": "node src/main.js",
