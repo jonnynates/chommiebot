@@ -1,0 +1,9 @@
+# flyctl launch added from .gitignore
+**\node_modules
+**\.env
+**\google.json
+**\auth.json
+**\token.json
+**\credentials.json
+**\*\config\*
+fly.toml

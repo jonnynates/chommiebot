@@ -74,7 +74,7 @@ module.exports = {
   },
   async execute(interaction) {
     const product_id = interaction.options.getString("name");
-
+    console.log("here3");
     if (isNaN(parseInt(product_id))) {
       const product_line = await getProductLineByID(selectedGrade);
       interaction.reply({
