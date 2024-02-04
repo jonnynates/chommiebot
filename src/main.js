@@ -18,4 +18,4 @@ for (const folder of functionFolders) {
 client.handleEvents();
 client.handleCommands();
 
-client.login(process.env.token);
+client.login(process.env.TOKEN);
